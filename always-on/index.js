@@ -221,7 +221,7 @@ server.on('connect', (event) => {
 
   // Display connection info.
   const horizontalRule = new Array(60).fill('⎺').join('')
-  console.log('\nHypha Spike: Multiwriter 2')
+  console.log('\nHypha Spike: Persistence 1')
   console.log(horizontalRule)
   console.log(`Serving: ${event.uri}`)
   console.log(`Working directory: ${event.dir}`)
