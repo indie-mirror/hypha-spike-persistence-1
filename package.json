@@ -1,7 +1,7 @@
 {
-  "name": "hypha-spike-multiwriter-2",
+  "name": "hypha-spike-persistence-1",
   "version": "1.0.0",
-  "description": "Hypha Spike: Multiwriter 2",
+  "description": "Hypha Spike: Persistence 1",
   "main": "always-on/index.js",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
@@ -9,7 +9,7 @@
   },
   "repository": {
     "type": "git",
-    "url": "git@source.ind.ie:hypha/spikes/multiwriter-2.git"
+    "url": "git@source.ind.ie:hypha/spikes/persistence-1.git"
   },
   "keywords": [
     "hypha",
