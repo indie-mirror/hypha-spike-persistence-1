@@ -1,6 +1,6 @@
-# Hypha Spike: Multiwriter 2
+# Hypha Spike: Persistence 1
 
-[Blog post](https://ar.al/2019/02/01/hypha-spike-multiwriter-2/)
+[Blog post](https://ar.al/2019/02/01/hypha-spike-persistence-1/)
 
 ## Usage
 
