@@ -13,7 +13,8 @@ const generateEFFDicewarePassphrase = require('eff-diceware-passphrase')
 
 // Database
 const { Buffer } = require('buffer')
-const ram = require('random-access-memory')
+const randomAccessIndexedDB = require('random-access-idb')
+let storage
 
 const HypercoreProtocol = require('hypercore-protocol')
 const hypercore = require('hypercore')
@@ -243,8 +244,14 @@ function createDatabase(readKey, writeKey = null) {
   console.log(`Creating new hyperdb with read key ${to_hex(readKey)} and write key ${to_hex(writeKey)}`)
   console.log(`This node ${(writeKey === null) ? 'is not': 'is'} an origin node.`)
 
+  // Unlike random-access-memory, when making a random-access-idb instance we have to
+  // first instantiate the database with a name. We will use the discovery key for the name.
+  const databaseName = model.keys.nodeDiscoveryKeyInHex
+
+  storage = randomAccessIndexedDB(databaseName)
+
   // Create a new hypercore using the newly-generated key material.
-  db = hyperdb((filename) => ram(filename), readKey, {
+  db = hyperdb((filename) => storage(filename), readKey, {
     createIfMissing: false,
     overwrite: false,
     valueEncoding: 'json',
