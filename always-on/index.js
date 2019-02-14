@@ -20,7 +20,6 @@ const { pipeline } = require('stream')
 const express = require('express')
 const expressWebSocket = require('express-ws')
 const websocketStream = require('websocket-stream/stream')
-const ram  = require('random-access-memory')
 const hyperdb = require('hyperdb')
 const hyperswarm = require('@hyperswarm/network')
 
@@ -121,7 +120,7 @@ server.on('connect', (event) => {
     }
 
     // Create a new hyperdb with the passed read key and replicate.
-    const db = hyperdb((filename) => ram(filename), readKey, {
+    const db = hyperdb('unprivileged.db', readKey, {
       createIfMissing: false,
       overwrite: false,
       valueEncoding: 'json'
