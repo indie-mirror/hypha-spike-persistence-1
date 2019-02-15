@@ -103,41 +103,7 @@ class View extends EventEmitter {
   get domain () {
     return setupForm.elements.domain.value
   }
-
-
-  // validateOtherNodeLocalReadKey() {
-  //   // Validates that the read key you want to authorise is 64 bytes and hexadecimal.
-  //   const otherNodeReadKeyInHex = otherNodeLocalReadKeyInHexTextField.value
-  //   const publicReadKeyInHex = publicSigningKeyTextField.value
-  //   const localReadKeyInHex = localReadKeyTextField.value
-
-  //   if (otherNodeReadKeyInHex.length !== 64) {
-  //     console.log('Other node local read key is the wrong size', otherNodeReadKeyInHex.length)
-  //     authoriseButton.enabled = false
-  //     return
-  //   }
-
-  //   if (otherNodeReadKeyInHex.match(/^([0-9, a-f]+)$/) === null) {
-  //     console.log('Non-hexadecimal digits present in local read key; cannot be valid.')
-  //     authoriseButton.enabled = false
-  //     return
-  //   }
-
-  //   if (otherNodeReadKeyInHex === publicReadKeyInHex) {
-  //     console.log('The key to authorise cannot be the public read key for this domain.')
-  //     authoriseButton.enabled = false
-  //     return
-  //   }
-
-  //   if (otherNodeReadKeyInHex === localReadKeyInHex) {
-  //     console.log('The key to authorise cannot be the local read key for this domain.')
-  //     authoriseButton.enabled = false
-  //     return
-  //   }
-
-  //   authoriseButton.enabled = true
-  // }
-
+  
 
   validatePassphrase () {
     const passphrase = passphraseTextField.value
