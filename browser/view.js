@@ -11,17 +11,22 @@ const ButtonWithProgressIndicator = require('./lib/button-with-progress-indicato
 // indexOf surrounded by spaces: ' word '.
 const effDicewareWords = ` ${require('eff-diceware-passphrase/wordlist.json').join(' ')} `
 
-//
-// viewModel
-//
 
-const kSignIn = 'Sign in'
-const kSignUp = 'Sign up'
-const viewModel = {
-  action: kSignUp
-}
-
+//
 // HTML elements.
+//
+
+// Main views
+
+const loadingView = document.getElementById('loadingView')
+const gettingStartedView = document.getElementById('gettingStartedView')
+const signedOutView = document.getElementById('signedOutView')
+const singedInView = document.getElementById('signedInView')
+
+// Developer console
+const developerConsole = document.getElementById('developerConsole')
+
+// ====
 const setupForm = document.getElementById('setupForm')
 const nodeNameTextField = document.getElementById('nodeName')
 const accessButton = new ButtonWithProgressIndicator('accessButton')
@@ -46,6 +51,25 @@ const publicEncryptionKeyTextField = document.getElementById('publicEncryptionKe
 const privateEncryptionKeyTextField = document.getElementById('privateEncryptionKey')
 
 const signals = ['ready', 'change', 'error', 'append', 'download', 'upload', 'sync', 'close']
+
+
+//
+// viewModel
+//
+
+const views = {
+  loading: loadingView,
+  gettingStarted: gettingStartedView,
+  signedIn: singedInView,
+  signedOut: signedOutView
+}
+
+const kSignIn = 'Sign in'
+const kSignUp = 'Sign up'
+const viewModel = {
+  currentState: null,
+  action: kSignUp
+}
 
 
 class View extends EventEmitter {
@@ -88,6 +112,34 @@ class View extends EventEmitter {
 
       this.emit('ready')
     })
+  }
+
+
+  updateCurrentViewState() {
+    console.log('Updating view state.')
+    for (let viewState in this.viewStates) {
+      views[viewState].hidden = !(viewState === viewModel.currentState)
+    }
+  }
+
+  get viewStates () {
+    return {
+      loading: 'loading',
+      gettingStarted: 'gettingStarted',
+      signedIn: 'signedIn',
+      signedOut: 'signedOut',
+    }
+  }
+
+  set viewState (viewState) {
+    console.log(`Setting view state to ${viewState}`)
+    viewModel.currentState = viewState
+    this.updateCurrentViewState()
+  }
+
+
+  get viewState () {
+    return viewModel.currentState
   }
 
 

@@ -255,6 +255,9 @@ function getLocalReadKey() {
 
 // Decide whether to show the Sign Up or Sign In screens and whether to create a new database or use the existing one.
 async function setInitialState () {
+
+  view.viewState = view.viewStates.loading
+
   loadSettings()
 
   const localReadKey = getLocalReadKey()
