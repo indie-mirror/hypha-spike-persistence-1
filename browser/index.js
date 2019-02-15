@@ -51,6 +51,9 @@ const View = require('./view')
 const model = require('./model')
 const view = new View(model)
 
+// App settings object, peristed using local storage.
+let settings = null
+
 const sodium = require('sodium-universal')
 
 const ephemeralMessageHashes = {}
@@ -230,6 +233,52 @@ function createMessageHash(message) {
   return crypto.createHash('sha256').update(JSON.stringify(message)).digest('hex')
 }
 
+function loadSettings () {
+  settings = window.localStorage.settings === undefined ? {} : window.localStorage.settings
+}
+
+function persistSettings () {
+  window.localStorage.settings = JSON.stringify(settings || {})
+}
+
+// Returns the global read key for this domain or returns null if one does not exist.
+// (One not existing means that the always-on node for this domain has not been set up yet.)
+async function getGlobalReadKeyViaDatDNS() {
+  console.log('Todo: getGlobalReadKeyViaDatDNS()')
+  return null
+}
+
+function getLocalReadKey() {
+  console.log(`Local database exists? ${settings.databaseExists}`)
+  return settings.localReadKey === undefined ? null : settings.localReadKey
+}
+
+// Decide whether to show the Sign Up or Sign In screens and whether to create a new database or use the existing one.
+async function setInitialState () {
+  loadSettings()
+
+  const localReadKey = getLocalReadKey()
+  if (localReadKey !== null) {
+    // Local read key exists, create the local database using it.
+    console.log('Local read key exists. About to create database.')
+    // TODO
+  } else {
+    // Local database does not exist. Check if remote database exists
+    // (in other words, has the owner of this Hypha signed up yet?)
+    const globalReadKey = await getGlobalReadKeyViaDatDNS()
+    if (globalReadKey !== null) {
+      // We have a global read key, go ahead and create the database.
+      console.log('Global read key exists but local database does not. Creating local database…')
+      // TODO
+    } else {
+      // Global read key does not exist so the owner of this Hypha has not
+      // signed up yet. Show the sign up interface.
+      console.log('Global read key does not exist. Showing sign up interface.')
+      // TODO
+    }
+  }
+}
+
 // TODO: Make this accept the global read key, global secret key, and local read key, and local write key as parameters.
 // ===== If the global secret key is not passed in and the local read and write keys are, then we create a writer based
 //       on an existing database (using its global read key).
@@ -244,9 +293,7 @@ function createDatabase(readKey, writeKey = null) {
   console.log(`Creating new hyperdb with read key ${to_hex(readKey)} and write key ${to_hex(writeKey)}`)
   console.log(`This node ${(writeKey === null) ? 'is not': 'is'} an origin node.`)
 
-  // Unlike random-access-memory, when making a random-access-idb instance we have to
-  // first instantiate the database with a name. We will use the discovery key for the name.
-  const databaseName = model.keys.nodeDiscoveryKeyInHex
+  const databaseName = model.domain
 
   storage = randomAccessIndexedDB(databaseName)
 
@@ -471,6 +518,10 @@ view.on('ready', () => {
   // Generate the initial node name as <platform> on <os>
   model.nodeName = `${platform.name} on ${platform.os}`
   view.nodeName = model.nodeName
+  model.domain = document.location.hostname
+  view.domain = model.domain
+
+  setInitialState()
 })
 
 view.on('signUp', () => {

@@ -33,26 +33,9 @@
       <legend>Sign up / sign in</legend>
 
       <div>
-        <label for='domain'>Domain:</label>
-        <input type='text' id='domain' value='ar.al' readonly>
-      </div>
-
-      <div>
-        <label for='nodeName'>Node:</label>
-        <input type='text' id='nodeName' value=''>
-      </div>
-
-      <div>
         <label>Passphrase:</label>
         <input type='text' id='passphrase'>
       </div>
-    </fieldset>
-
-    <fieldset class='details'>
-        <div>
-          <label for='publicSigningKey'>Hyphalink:</label>
-          <input type='text' id='publicSigningKey'>
-        </div>
     </fieldset>
 
     <fieldset class='details'>
@@ -86,6 +69,21 @@
 
     <fieldset class='details'>
       <legend>Node details</legend>
+
+      <div>
+        <label for='domain'>Domain:</label>
+        <input type='text' id='domain' value='' readonly>
+      </div>
+
+      <div>
+        <label for='publicSigningKey'>Hyphalink:</label>
+        <input type='text' id='publicSigningKey'>
+      </div>
+
+      <div>
+        <label for='nodeName'>Node description:</label>
+        <input type='text' id='nodeName' value=''>
+      </div>
 
       <div>
         <label for='generated'>Hyperdb created?</label>

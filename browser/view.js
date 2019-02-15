@@ -101,6 +101,11 @@ class View extends EventEmitter {
   }
 
 
+  set domain(name) {
+    setupForm.elements.domain.value = name
+  }
+
+
   get domain () {
     return setupForm.elements.domain.value
   }
