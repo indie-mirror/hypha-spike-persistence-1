@@ -95,6 +95,7 @@ class View extends EventEmitter {
     nodeNameTextField.value = name
   }
 
+
   get nodeName () {
     return setupForm.elements.nodeName.value
   }
@@ -103,7 +104,7 @@ class View extends EventEmitter {
   get domain () {
     return setupForm.elements.domain.value
   }
-  
+
 
   validatePassphrase () {
     const passphrase = passphraseTextField.value
