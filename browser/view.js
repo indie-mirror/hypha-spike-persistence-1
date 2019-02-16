@@ -26,10 +26,14 @@ const singedInView = document.getElementById('signedInView')
 // Developer console
 const developerConsole = document.getElementById('developerConsole')
 
+// Forms
+const signUpForm = document.getElementById('signUpForm')
+
 // ====
 const setupForm = document.getElementById('setupForm')
 const nodeNameTextField = document.getElementById('nodeName')
-const accessButton = new ButtonWithProgressIndicator('accessButton')
+const changeButton = new ButtonWithProgressIndicator('changeButton')
+const chooseButton = new ButtonWithProgressIndicator('chooseButton')
 const authoriseButton = new ButtonWithProgressIndicator('authoriseButton')
 const authorisationRequest = document.getElementById('authorisationRequest')
 const authorisationRequestNodeName = document.getElementById('authorisationRequestNodeName')
@@ -64,11 +68,8 @@ const views = {
   signedOut: signedOutView
 }
 
-const kSignIn = 'Sign in'
-const kSignUp = 'Sign up'
 const viewModel = {
-  currentState: null,
-  action: kSignUp
+  currentState: null
 }
 
 
@@ -82,17 +83,21 @@ class View extends EventEmitter {
     document.addEventListener('DOMContentLoaded', () => {
       this.resetForm()
 
-      this.validatePassphrase()
+      // this.validatePassphrase()
 
       passphraseTextField.addEventListener('keyup', this.validatePassphrase)
 
-      // Sign up / sign in button.
-      accessButton.on('click', event => {
-        if (viewModel.action === kSignUp) {
-          this.emit('signUp')
-        } else {
-          this.emit('signIn', passphraseTextField.value)
-        }
+      // Change passphrase button
+      changeButton.on('click', event => {
+        this.emit('changePassphrase')
+      })
+
+      // Choose passphrase / sign-up button
+      chooseButton.on('click', event => {
+        this.emit('signUp')
+        // } else {
+        //   this.emit('signIn', passphraseTextField.value)
+        // }
       })
 
       // Authorise button.
@@ -166,7 +171,7 @@ class View extends EventEmitter {
   validatePassphrase () {
     const passphrase = passphraseTextField.value
     viewModel.action = (passphrase === '') ? kSignUp : kSignIn
-    accessButton.label = viewModel.action
+    chooseButton.label = viewModel.action
 
     if (viewModel.action === kSignIn) {
       // Validate that the passphrase exists solely of diceware words
@@ -189,9 +194,9 @@ class View extends EventEmitter {
       // if (!allWordsInWordList) { console.log ('Non-diceware words entered') }
       // if (entropyIsHighEnough && allWordsInWordList) { console.log ('Passphrase valid') }
 
-      accessButton.enabled = (entropyIsHighEnough && allWordsInWordList)
+      chooseButton.enabled = (entropyIsHighEnough && allWordsInWordList)
     } else {
-      accessButton.enabled = true
+      chooseButton.enabled = true
     }
   }
 
@@ -200,16 +205,16 @@ class View extends EventEmitter {
   }
 
   showPassphrase () {
-    setupForm.elements.passphrase.value = this.model.passphrase
+    signUpForm.elements.passphrase.value = this.model.passphrase
   }
 
   showAccessProgress () {
-    accessButton.showProgress()
+    chooseButton.showProgress()
   }
 
 
   hideAccessProgress () {
-    accessButton.hideProgress()
+    chooseButton.hideProgress()
   }
 
 
@@ -282,7 +287,7 @@ class View extends EventEmitter {
       detailSections[i].style.display = 'block'
     }
 
-    accessButton.visible = false
+    chooseButton.visible = false
 
     this.displayKeys()
   }
@@ -294,7 +299,7 @@ class View extends EventEmitter {
       detailSections[i].style.display = 'none'
     }
 
-    accessButton.visible = true
+    chooseButton.visible = true
   }
 
 

@@ -23,8 +23,44 @@
   </div>
 
   <div id='gettingStartedView'>
-    <h1>Get started</h1>
-    <p>TODO</p>
+    <h1>Choose your passphrase</h1>
+
+    <form id='signUpForm'>
+      <fieldset>
+      <div>
+        <label>Passphrase:</label>
+        <textarea id='passphrase'></textarea>
+      </div>
+
+      <div id='changeButton' class='buttonWithProgressIndicator'>
+        <button type='button'>Change</button>
+        <!-- Courtesy: http://tobiasahlin.com/spinkit/ -->
+        <div class='spinner'>
+          <div class='rect1'></div>
+          <div class='rect2'></div>
+          <div class='rect3'></div>
+          <div class='rect4'></div>
+          <div class='rect5'></div>
+        </div>
+      </div>
+
+      <div id='chooseButton' class='buttonWithProgressIndicator'>
+        <button type='button'>Choose</button>
+        <!-- Courtesy: http://tobiasahlin.com/spinkit/ -->
+        <div class='spinner'>
+          <div class='rect1'></div>
+          <div class='rect2'></div>
+          <div class='rect3'></div>
+          <div class='rect4'></div>
+          <div class='rect5'></div>
+        </div>
+      </div>
+    </fieldset>
+    </form>
+
+    <p>Your passphrase is the only thing that protects your Hypha. It is randomly chosen for you using <a href='https://www.eff.org/dice'>a method called diceware</a> that would take the most sophisticated computers today hundreds of millions of years to crack<sup>1</sup>. If your passphrase is compromised, your Hypha is compromised. If you lose it, you can no longer write to your Hypha. There is no recovery process.  Please save your passphrase in a password manager like <a href='https://www.passwordstore.org/'>pass</a> or <a href='https://1password.com/'>1password</a> and/or make a physical copy of it and store it in a safe place (like a safe, not on a post-it note attached to your monitor). Ideally, also try to memorise it.</p>
+
+    <p><em>1: The passphrase selection process has 100 bits of entropy.</em></p>
   </div>
 
   <div id='signedOutView'>
@@ -61,15 +97,6 @@
         </div>
     </fieldset>
 
-    <fieldset>
-      <legend>Sign up / sign in</legend>
-
-      <div>
-        <label>Passphrase:</label>
-        <input type='text' id='passphrase'>
-      </div>
-    </fieldset>
-
     <fieldset class='details'>
       <legend>Request authorisation</legend>
       <div id='requestAuthorisationButton' class='buttonWithProgressIndicator'>
@@ -83,20 +110,6 @@
           <div class='rect5'></div>
         </div>
       </div>
-    </fieldset>
-
-    <fieldset>
-      <div id='accessButton' class='buttonWithProgressIndicator'>
-        <button type='button'>Sign up</button>
-        <!-- Courtesy: http://tobiasahlin.com/spinkit/ -->
-        <div class='spinner'>
-            <div class='rect1'></div>
-            <div class='rect2'></div>
-            <div class='rect3'></div>
-            <div class='rect4'></div>
-            <div class='rect5'></div>
-          </div>
-        </div>
     </fieldset>
 
     <fieldset class='details'>

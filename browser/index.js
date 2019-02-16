@@ -253,6 +253,12 @@ function getLocalReadKey() {
   return settings.localReadKey === undefined ? null : settings.localReadKey
 }
 
+
+async function changePassphrase () {
+  model.passphrase = await generatePassphrase()
+  view.showPassphrase()
+}
+
 // Decide whether to show the Sign Up or Sign In screens and whether to create a new database or use the existing one.
 async function setInitialState () {
 
@@ -277,7 +283,8 @@ async function setInitialState () {
       // Global read key does not exist so the owner of this Hypha has not
       // signed up yet. Show the sign up interface.
       console.log('Global read key does not exist. Showing sign up interface.')
-      // TODO
+      view.viewState = view.viewStates.gettingStarted
+      await changePassphrase()
     }
   }
 }
@@ -526,6 +533,8 @@ view.on('ready', () => {
 
   setInitialState()
 })
+
+view.on('changePassphrase', changePassphrase)
 
 view.on('signUp', () => {
   initialiseNode()
