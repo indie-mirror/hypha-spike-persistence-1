@@ -11,7 +11,7 @@
   <h1>Hypha</h1>
   <p>Version 1.0.0</p>
 
-  <div id='loadingView'>
+  <div id='loadingView'  class='viewState'>
     <h1>Loading…</h1>
     <div id='initialLoadProgressIndicator' class='spinner'>
       <div class='rect1'></div>
@@ -22,7 +22,7 @@
     </div>
   </div>
 
-  <div id='gettingStartedView'>
+  <div id='gettingStartedView'  class='viewState'>
     <h1>Choose your passphrase</h1>
 
     <form id='signUpForm'>
@@ -63,12 +63,12 @@
     <p><em>1: The passphrase selection process has 100 bits of entropy.</em></p>
   </div>
 
-  <div id='signedOutView'>
+  <div id='signedOutView' class='viewState'>
     <h1>Unauthorised</h1>
     <p>TODO</p>
   </div>
 
-  <div id='signedInView'>
+  <div id='signedInView' class='viewState'>
     <h1>Authorised</h1>
     <p>TODO</p>
   </div>
@@ -80,7 +80,7 @@
 
   <form id='setupForm'>
 
-    <fieldset id='authorisationRequest'>
+    <fieldset id='authorisationRequest' class='details'>
       <legend>Authorisation request</legend>
       <p>Authorise node <span id='authorisationRequestNodeName'></span>?</p>
 

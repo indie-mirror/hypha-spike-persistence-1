@@ -77,9 +77,8 @@ async function initialiseNode(passphrase = null) {
 async function createDomain() {
   console.log('Initialising new node with new domain')
 
-  model.passphrase = await generatePassphrase()
-
-  view.showPassphrase()
+  // model.passphrase = await generatePassphrase()
+  // view.showPassphrase()
 
   const domain = view.domain
 
@@ -234,23 +233,30 @@ function createMessageHash(message) {
 }
 
 function loadSettings () {
-  settings = window.localStorage.settings === undefined ? {} : window.localStorage.settings
+  settings = window.localStorage.settings === undefined ? {} : JSON.parse(window.localStorage.settings)
+  console.log('Loaded local settings', settings)
 }
 
 function persistSettings () {
+  console.log('Persisting local settings', settings)
   window.localStorage.settings = JSON.stringify(settings || {})
+}
+
+function updateSetting (key, value) {
+  settings[key] = value
+  persistSettings()
 }
 
 // Returns the global read key for this domain or returns null if one does not exist.
 // (One not existing means that the always-on node for this domain has not been set up yet.)
-async function getGlobalReadKeyViaDatDNS() {
-  console.log('Todo: getGlobalReadKeyViaDatDNS()')
+async function getReadKeyFromDatDNS() {
+  console.log('Todo: getReadKeyFromDatDNS()')
   return null
 }
 
-function getLocalReadKey() {
-  console.log(`Local database exists? ${settings.databaseExists}`)
-  return settings.localReadKey === undefined ? null : settings.localReadKey
+function getReadKeyFromLocalStorage() {
+  console.log(`settings.readKey ${settings.readKey}`)
+  return settings.readKey === undefined ? null : Buffer.from(settings.readKey)
 }
 
 
@@ -266,23 +272,28 @@ async function setInitialState () {
 
   loadSettings()
 
-  const localReadKey = getLocalReadKey()
-  if (localReadKey !== null) {
+  const readKeyFromLocalStorage = getReadKeyFromLocalStorage()
+  if (readKeyFromLocalStorage !== null) {
     // Local read key exists, create the local database using it.
-    console.log('Local read key exists. About to create database.')
-    // TODO
+    console.log('Local read key from local storage exists. About to create database.')
+    console.log('readKeyFromLocalStorage', readKeyFromLocalStorage)
+
+    view.viewState = view.viewStates.signedOut
+    createDatabase(readKeyFromLocalStorage)
+    showDetails()
+
   } else {
-    // Local database does not exist. Check if remote database exists
-    // (in other words, has the owner of this Hypha signed up yet?)
-    const globalReadKey = await getGlobalReadKeyViaDatDNS()
-    if (globalReadKey !== null) {
-      // We have a global read key, go ahead and create the database.
-      console.log('Global read key exists but local database does not. Creating local database…')
+    // Local database does not exist. Check if the owner of this Hypha has signed up yet
+    // by attempting to get the read key from a Dat DNS lookup.
+    const readKeyFromDatDNS = await getReadKeyFromDatDNS()
+    if (readKeyFromDatDNS !== null) {
+      // We got the read key from Dat DNS, go ahead and create the database.
+      console.log('Got read key from Dat DNS. Creating local database…')
       // TODO
     } else {
       // Global read key does not exist so the owner of this Hypha has not
       // signed up yet. Show the sign up interface.
-      console.log('Global read key does not exist. Showing sign up interface.')
+      console.log('Could not get read key from Dat DNS. Showing sign-up interface.')
       view.viewState = view.viewStates.gettingStarted
       await changePassphrase()
     }
@@ -300,12 +311,24 @@ function createDatabase(readKey, writeKey = null) {
   let stream = null
   let updateInterval = null
 
-  console.log(`Creating new hyperdb with read key ${to_hex(readKey)} and write key ${to_hex(writeKey)}`)
+  console.log(`Creating new hyperdb with read key ${to_hex(readKey)} and write key ${to_hex(writeKey)}`, readKey)
   console.log(`This node ${(writeKey === null) ? 'is not': 'is'} an origin node.`)
+
+  // Note: I cannot find a way to catch the
 
   const databaseName = model.domain
 
   storage = randomAccessIndexedDB(databaseName)
+
+  // I can find no way to catch the Error: another hypercore is stored here error from hypercore
+  // so let’s watch out for IndexedDB timing issues leading to corrupted installations. Given that
+  // we have no reliable way of checking if an IndexedDB database already exists (!!!), we are
+  // going to rely on our own flag, stored in localStorage. I don’t completely understand when exactly
+  // an indexedDB database is created and we don’t have a callback for that in hyperdb (is it synchronous,
+  // right after the following db = hyperdb(…) line or at on('ready') or sometime in between the two?) so
+  // this may or may not be an issue.
+  //
+  // I opened an issue for the error at https://github.com/mafintosh/hyperdb/issues/164
 
   // Create a new hypercore using the newly-generated key material.
   db = hyperdb((filename) => storage(filename), readKey, {
@@ -315,6 +338,10 @@ function createDatabase(readKey, writeKey = null) {
     secretKey: writeKey,
     storeSecretKey: false
     // Note: do not define onWrite(). Leads to errors.
+  })
+
+  db.on('error', error => {
+    console.log('Database error', error)
   })
 
   // Watch the database for ephemeral messages.
@@ -378,6 +405,17 @@ function createDatabase(readKey, writeKey = null) {
     const dbKeyInHex = to_hex(dbKey)
 
     console.log(`db: [Ready] ${dbKeyInHex}`)
+
+    // Save the read key in local storage
+    updateSetting('readKey', dbKeyInHex)
+
+    // TODO: It looks like we will need reproducible local writers after all: how else
+    // ===== can we recreate a local database on reload?
+
+    // Also note whether this is the origin node or not
+    if (writeKey !== null) {
+      updateSetting('isOriginNode', true)
+    }
 
     // Add the database to the model.
     model.db = db

@@ -108,6 +108,12 @@ Button {
   height: 26px;
 }
 
+/* View states */
+
+.viewState {
+  display: none;
+}
+
 /* Signals */
 
 .visible { display: inline-block !important; }

@@ -78,6 +78,8 @@ class View extends EventEmitter {
   constructor (model) {
     super()
 
+    this.viewState = this.viewStates.loading
+
     this.model = model
 
     document.addEventListener('DOMContentLoaded', () => {
@@ -121,9 +123,8 @@ class View extends EventEmitter {
 
 
   updateCurrentViewState() {
-    console.log('Updating view state.')
     for (let viewState in this.viewStates) {
-      views[viewState].hidden = !(viewState === viewModel.currentState)
+      views[viewState].style.display = (viewState === viewModel.currentState) ? 'block' : 'none'
     }
   }
 
