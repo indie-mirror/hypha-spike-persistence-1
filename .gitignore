@@ -2,3 +2,4 @@ node_modules
 server/localhost.pem
 server/localhost-key.pem
 unprivileged.db
+.vscode
