@@ -1,6 +1,6 @@
 ////////////////////////////////////////////////////////////////////////////////
 //
-// Hypha: always-on node (unprivileged).
+// Hypha: always-on relay node (unprivileged).
 //
 // This node exists to provide findability and reliability. It does not
 // know the owner’s passphrase or any of the secret keys derived from it.
@@ -28,11 +28,41 @@ const signalHubServer = require('signalhub/server')
 const budo = require('budo')
 const babelify = require('babelify')
 
+const { SecureEphemeralMessagingChannel } = require('@hypha/secure-ephemeral-messaging-channel')
+
+const os = require('os')
+const path = require('path')
+
+const defaultSettings = {
+  readKey: null
+}
+
+let settings = {}
+
+const dataDirectory = path.join(os.homedir(), '.hypha')
+const settingsFilePath = path.join(dataDirectory, 'settings.json')
+
+// Ensure data directory exists and that a settings file does too.
+if (!fs.existsSync(dataDirectory)) {
+  fs.mkdirSync(dataDirectory)
+}
+
+if (!fs.existsSync(settingsFilePath)) {
+  console.log('Settings file does not exist, creating…')
+  fs.writeFileSync(settingsFilePath, JSON.stringify(defaultSettings), 'utf-8')
+  settings = defaultSettings
+} else {
+  console.log('Settings file exists, loading…')
+  settings = JSON.parse(fs.readFileSync(settingsFilePath, 'utf-8'))
+}
+
+console.log('Settings loaded', settings)
+
+console.log('Data directory', dataDirectory)
+
 const router = express.Router()
 
 const hyperdbs = {}
-
-const { SecureEphemeralMessagingChannel } = require('@hypha/secure-ephemeral-messaging-channel')
 
 // Note: the always-on node is an unprivileged node. It will only relay
 // ===== the secure messages to other nodes (to other web nodes via WebSocket
@@ -59,6 +89,9 @@ signalHub.listen(444, 'localhost', () => {
   console.log(`[Signal Hub] Listening on port ${signalHub.address().port}.`)
 })
 
+// Check if we have been initialised yet.
+
+
 // Create secure development web server via budo.
 const server = budo('browser/index.js', {
   live: false,
@@ -83,8 +116,12 @@ server.on('connect', (event) => {
     perMessageDeflate: false
   })
 
+  //
   // Add web socket routes.
-  router.ws('/hypha/:readKey', (webSocket, request) => {
+  //
+
+  // Sign up.
+  router.ws('/sign-up/:readKey', (webSocket, request) => {
 
     const readKey = request.params.readKey
 
