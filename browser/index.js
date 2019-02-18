@@ -51,7 +51,19 @@ const View = require('./view')
 const model = require('./model')
 const view = new View(model)
 
+//
 // App settings object, peristed using local storage.
+//
+// (For glossary of terms, please see http://localhost:1313/2019/02/18/hypha-glossary/)
+//
+// initialisedNode:       (bool) Is this an initialised node?
+//  authorisedNode:       (bool) Is this an authorised node?
+//         readKey: (hex string) 32-byte local writer read key
+//        writeKey: (hex string) 64-byte local writer write key*
+//
+// * Encrypted with the encryption key if the node is an authorised node (writer),
+//   plaintext otherwise.
+//
 let settings = null
 
 const sodium = require('sodium-universal')
