@@ -56,15 +56,22 @@ const view = new View(model)
 //
 // (For glossary of terms, please see http://localhost:1313/2019/02/18/hypha-glossary/)
 //
-// initialisedNode:       (bool) Is this an initialised node?
-//  authorisedNode:       (bool) Is this an authorised node?
-//         readKey: (hex string) 32-byte local writer read key
-//        writeKey: (hex string) 64-byte local writer write key*
+// isInitialisedNode:       (bool) Is this an initialised node?
+//  isAuthorisedNode:       (bool) Is this an authorised node?
+//           readKey: (hex string) 32-byte local writer read key
+//          writeKey: (hex string) 64-byte local writer write key*
 //
 // * Encrypted with the encryption key if the node is an authorised node (writer),
 //   plaintext otherwise.
 //
 let settings = null
+
+const defaultSettings = {
+  isInitialisedNode: false,
+  isAuthorisedNode: false,
+  readKey: null,
+  writeKey: null,
+}
 
 const sodium = require('sodium-universal')
 
@@ -245,18 +252,26 @@ function createMessageHash(message) {
 }
 
 function loadSettings () {
-  settings = window.localStorage.settings === undefined ? {} : JSON.parse(window.localStorage.settings)
+  let _settings = window.localStorage.settings
+  if (_settings !== undefined) {
+    _settings = JSON.parse(_settings)
+  } else {
+    console.log('Settings is undefined, using default settings.')
+    _settings = defaultSettings
+    persistSettings(_settings)
+  }
+  settings = _settings
   console.log('Loaded local settings', settings)
 }
 
-function persistSettings () {
+function persistSettings (settings) {
   console.log('Persisting local settings', settings)
-  window.localStorage.settings = JSON.stringify(settings || {})
+  window.localStorage.settings = JSON.stringify(settings)
 }
 
 function updateSetting (key, value) {
   settings[key] = value
-  persistSettings()
+  persistSettings(settings)
 }
 
 // Returns the global read key for this domain or returns null if one does not exist.
@@ -284,20 +299,25 @@ async function setInitialState () {
 
   loadSettings()
 
-  const readKeyFromLocalStorage = getReadKeyFromLocalStorage()
-  if (readKeyFromLocalStorage !== null) {
-    // Local read key exists, create the local database using it.
-    console.log('Local read key from local storage exists. About to create database.')
-    console.log('readKeyFromLocalStorage', readKeyFromLocalStorage)
-
-    view.viewState = view.viewStates.signedOut
-    createDatabase(readKeyFromLocalStorage)
-    showDetails()
-
+  if (settings.isInitialisedNode) {
+    if (settings.isAuthorisedNode) {
+      // This is an authorised node. We need the passphrase in order to set up the node.
+      // Using the passphrase, we will calculate the encryption key with which we will
+      // decrypt the local writer’s write key which we get from local storage.
+      // TODO
+      console.log('This is an authorised node. Going to prompt for passphrase and set up the hyperdb. TODO.')
+    } else {
+      // This is an initialised node but it has not been authorised yet.
+      // Create the local database using the local read key and (unencrypted) local write key.
+      // TODO
+      console.log('This is an initialised node. About to load it using the local writer read and write keys.')
+    }
   } else {
-    // Local database does not exist. Check if the owner of this Hypha has signed up yet
-    // by attempting to get the read key from a Dat DNS lookup.
+    // This node has not been initialised. Check if the hypha has
+    // by attempting to read the global read key via Dat DNS
+    // from the domain of this hypha.
     const readKeyFromDatDNS = await getReadKeyFromDatDNS()
+
     if (readKeyFromDatDNS !== null) {
       // We got the read key from Dat DNS, go ahead and create the database.
       console.log('Got read key from Dat DNS. Creating local database…')
@@ -309,7 +329,35 @@ async function setInitialState () {
       view.viewState = view.viewStates.gettingStarted
       await changePassphrase()
     }
+
+
   }
+
+  // const readKeyFromLocalStorage = getReadKeyFromLocalStorage()
+  // if (readKeyFromLocalStorage !== null) {
+  //   // Local read key exists, create the local database using it.
+  //   console.log('Local read key from local storage exists. About to create database.')
+  //   console.log('readKeyFromLocalStorage', readKeyFromLocalStorage)
+
+  //   view.viewState = view.viewStates.signedOut
+  //   createDatabase(readKeyFromLocalStorage)
+  //   showDetails()
+  // } else {
+  //   // Local database does not exist. Check if the owner of this Hypha has signed up yet
+  //   // by attempting to get the read key from a Dat DNS lookup.
+  //   const readKeyFromDatDNS = await getReadKeyFromDatDNS()
+  //   if (readKeyFromDatDNS !== null) {
+  //     // We got the read key from Dat DNS, go ahead and create the database.
+  //     console.log('Got read key from Dat DNS. Creating local database…')
+  //     // TODO
+  //   } else {
+  //     // Global read key does not exist so the owner of this Hypha has not
+  //     // signed up yet. Show the sign up interface.
+  //     console.log('Could not get read key from Dat DNS. Showing sign-up interface.')
+  //     view.viewState = view.viewStates.gettingStarted
+  //     await changePassphrase()
+  //   }
+  // }
 }
 
 // TODO: Make this accept the global read key, global secret key, and local read key, and local write key as parameters.
