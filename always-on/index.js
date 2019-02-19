@@ -34,7 +34,7 @@ const os = require('os')
 const path = require('path')
 
 const defaultSettings = {
-  readKey: null
+  readKey: ''
 }
 
 let settings = {}
@@ -59,6 +59,10 @@ if (!fs.existsSync(settingsFilePath)) {
 console.log('Settings loaded', settings)
 
 console.log('Data directory', dataDirectory)
+
+function persistSettings() {
+  fs.writeFileSync(settingsFilePath, JSON.stringify(settings), 'utf-8')
+}
 
 const router = express.Router()
 
@@ -89,9 +93,6 @@ signalHub.listen(444, 'localhost', () => {
   console.log(`[Signal Hub] Listening on port ${signalHub.address().port}.`)
 })
 
-// Check if we have been initialised yet.
-
-
 // Create secure development web server via budo.
 const server = budo('browser/index.js', {
   live: false,
@@ -106,9 +107,164 @@ const server = budo('browser/index.js', {
     transform: babelify
   },
   middleware: [
-    router
+    function (request, response, next) {
+      try {
+        //
+        // HTTPS routes.
+        //
+
+        // DAT DNS (see https://www.datprotocol.com/deps/0005-dns/)
+        if (request.url === '/.well-known/dat') {
+          response.setHeader('Content-Type', 'text/plain')
+          response.end(settings.readKey)
+          return
+        }
+
+        // Continue down the middleware chain.
+        next()
+
+      } catch (error) {
+        console.log('Middleware error', error)
+      }
+    },
+    router,
   ]
 })
+
+//
+// Replicate hyperdb with passed readKey over passed websocket.
+//
+function replicate(websocket, readKey) {
+  console.log('About to replicate hyperdb with read key', readKey)
+
+  if (hyperdbs[readKey] !== undefined) {
+    console.log(`Hyperdb with read key ${readKey} already exists. About to replicate.`)
+
+    const db = hyperdbs[readKey]
+
+    // Replicate.
+    // TODO: Refactor to remove redundancy.
+    const remoteWebStream = websocketStream(webSocket)
+    const localReplicationStream = db.replicate({
+      encrypt: false,
+      live: true,
+      extensions: ['secure-ephemeral']
+    })
+
+    // console.log('remoteWebStream', remoteWebStream)
+    // console.log('localReplicationStream', localReplicationStream)
+
+    pipeline(
+      remoteWebStream,
+      localReplicationStream,
+      remoteWebStream,
+      (error) => {
+        console.log(`[Non origin web socket] Pipe closed for ${readKey}`, error && error.message)
+      }
+    )
+
+    return
+  }
+
+  // Create a new hyperdb with the passed read key and replicate.
+  const db = hyperdb('unprivileged.db', readKey, {
+    // createIfMissing: false,
+    // overwrite: false,
+    // valueEncoding: 'json'
+  })
+
+  // Add to list of existing hyperdbs.
+  hyperdbs[readKey] = db
+
+  // Add this database to the secure ephemeral messaging channel.
+  // Note: this is an unprivileged node; it will act as a relay.
+  // It does so automatically, there is no further action required.
+  // None of the regular methods for privileged nodes are active on
+  // it and it emits no events.
+  secureEphemeralMessagingChannel.addDatabase(db)
+
+  // For debugging. Listen for the relay event. This event will most
+  // likely be removed later.
+  secureEphemeralMessagingChannel.on ('relay', (decodedMessage) => {
+    console.log('About to relay secure message', decodedMessage)
+  })
+
+  db.on('ready', () => {
+    console.log(`Hyperdb ready (${readKey})`)
+
+    const remoteWebStream = websocketStream(webSocket)
+
+    const watcher = db.watch('/table', () => {
+      db.get('/table', (error, values) => {
+        // New data is available on the db. Log it to the console.
+        const obj = values[0].value
+        for (let [key, value] of Object.entries(obj)) {
+          console.log(`[Replicate] ${key}: ${value}`)
+        }
+      })
+    })
+
+    //
+    // Replicate :)
+    //
+    const localReplicationStream = db.replicate({
+      encrypt: false,
+      live: true,
+      extensions: ['secure-ephemeral']
+    })
+
+    pipeline(
+      remoteWebStream,
+      localReplicationStream,
+      remoteWebStream,
+      (error) => {
+        console.log(`[Origin] Pipe closed for ${readKey}`, error && error.message)
+      }
+    )
+
+    //
+    // Connect to the hyperswarm for this hyperdb.
+    //
+    const nativePeers = {}
+
+    const swarm = hyperswarm()
+
+    const discoveryKey = db.discoveryKey
+    const discoveryKeyInHex = discoveryKey.toString('hex')
+
+    console.log(`Joining hyperswarm for discovery key ${discoveryKeyInHex}`)
+
+    // Join the swarm
+    swarm.join(discoveryKey, {
+      lookup: true, // find and connect to peers.
+      announce: true // optional: announce self as a connection target.
+    })
+
+    swarm.on('connection', (remoteNativeStream, details) => {
+      console.log(`Got peer for ${readKey} (discovery key: ${discoveryKeyInHex})`)
+
+      console.log('About to replicate!')
+
+      // Create a new replication stream
+      const nativeReplicationStream = db.replicate({
+        encrypt: false,
+        live: true,
+        extensions: ['secure-ephemeral']
+      })
+
+      // Replicate!
+      pipeline(
+        remoteNativeStream,
+        nativeReplicationStream,
+        remoteNativeStream,
+        (error) => {
+          console.log(`(Native stream from swarm) Pipe closed for ${readKey}`, error && error.message)
+        }
+      )
+    })
+  })
+}
+
 
 server.on('connect', (event) => {
   console.log('Setting up web socket server.')
@@ -117,143 +273,59 @@ server.on('connect', (event) => {
   })
 
   //
-  // Add web socket routes.
+  // Web socket routes.
+  //
+  // /hypha               : replicate the main hyperdb (the index)
+  // /sign-up             : create the main hyperdb (and replicate)
+  // /replicate/<readKey> : general replication method (for any hyperdb)
   //
 
-  // Sign up.
-  router.ws('/sign-up/:readKey', (webSocket, request) => {
+  // Create the main hyperdb.
+  router.ws('/sign-up/:readKey', (websocket, request) => {
+    // Ensure that the forever node has not been initialised.
+    if (settings.readKey !== null) {
+      websocket.send({error: 'Hypha already exists.'})
+      websocket.close()
+      return
+    }
+
+    const readKey = request.params.readKey
+    replicate(websocket, readKey)
+
+    //
+    // Save the read key in settings.
+    // TODO: Do this after actual confirmation of successful
+    // ===== hyperdb setup.
+    //
+    settings.readKey = readKey
+    persistSettings()
+  })
+
+
+  // Replicate the main hyperdb.
+  router.ws('/hypha', (websocket, request) => {
+    // Ensure that the forever node been initialised.
+    if (settings.readKey === null) {
+      websocket.send({error: 'Hypha does not exist.'})
+      websocket.close()
+      return
+    }
+
+    replicate(websocket, settings.readKey)
+  })
+
+
+  // Replicate the hyperdb with the passed readKey.
+  // TODO: Is this necessary? What checks should be in place?
+  router.ws('/replicate/:readKey', (webSocket, request) => {
 
     const readKey = request.params.readKey
 
     console.log('Got web socket request for ', readKey)
 
-    if (hyperdbs[readKey] !== undefined) {
-      console.log(`Hyperdb with read key ${readKey} already exists. About to replicate.`)
-
-      const db = hyperdbs[readKey]
-
-      // Replicate.
-      // TODO: Refactor to remove redundancy.
-      const remoteWebStream = websocketStream(webSocket)
-      const localReplicationStream = db.replicate({
-        encrypt: false,
-        live: true,
-        extensions: ['secure-ephemeral']
-      })
-
-      // console.log('remoteWebStream', remoteWebStream)
-      // console.log('localReplicationStream', localReplicationStream)
-
-      pipeline(
-        remoteWebStream,
-        localReplicationStream,
-        remoteWebStream,
-        (error) => {
-          console.log(`[Non origin web socket] Pipe closed for ${readKey}`, error && error.message)
-        }
-      )
-
-      return
-    }
-
-    // Create a new hyperdb with the passed read key and replicate.
-    const db = hyperdb('unprivileged.db', readKey, {
-      createIfMissing: false,
-      overwrite: false,
-      valueEncoding: 'json'
-    })
-
-    // Add to list of existing hyperdbs.
-    hyperdbs[readKey] = db
-
-    // Add this database to the secure ephemeral messaging channel.
-    // Note: this is an unprivileged node; it will act as a relay.
-    // It does so automatically, there is no further action required.
-    // None of the regular methods for privileged nodes are active on
-    // it and it emits no events.
-    secureEphemeralMessagingChannel.addDatabase(db)
-
-    // For debugging. Listen for the relay event. This event will most
-    // likely be removed later.
-    secureEphemeralMessagingChannel.on ('relay', (decodedMessage) => {
-      console.log('About to relay secure message', decodedMessage)
-    })
-
-    db.on('ready', () => {
-      console.log(`Hyperdb ready (${readKey})`)
-
-      const remoteWebStream = websocketStream(webSocket)
-
-      const watcher = db.watch('/table', () => {
-        db.get('/table', (error, values) => {
-          // New data is available on the db. Log it to the console.
-          const obj = values[0].value
-          for (let [key, value] of Object.entries(obj)) {
-            console.log(`[Replicate] ${key}: ${value}`)
-          }
-        })
-      })
-
-      //
-      // Replicate :)
-      //
-      const localReplicationStream = db.replicate({
-        encrypt: false,
-        live: true,
-        extensions: ['secure-ephemeral']
-      })
-
-      pipeline(
-        remoteWebStream,
-        localReplicationStream,
-        remoteWebStream,
-        (error) => {
-          console.log(`[Origin] Pipe closed for ${readKey}`, error && error.message)
-        }
-      )
-
-      //
-      // Connect to the hyperswarm for this hyperdb.
-      //
-      const nativePeers = {}
-
-      const swarm = hyperswarm()
-
-      const discoveryKey = db.discoveryKey
-      const discoveryKeyInHex = discoveryKey.toString('hex')
-
-      console.log(`Joining hyperswarm for discovery key ${discoveryKeyInHex}`)
-
-      // Join the swarm
-      swarm.join(discoveryKey, {
-        lookup: true, // find and connect to peers.
-        announce: true // optional: announce self as a connection target.
-      })
-
-      swarm.on('connection', (remoteNativeStream, details) => {
-        console.log(`Got peer for ${readKey} (discovery key: ${discoveryKeyInHex})`)
-
-        console.log('About to replicate!')
-
-        // Create a new replication stream
-        const nativeReplicationStream = db.replicate({
-          encrypt: false,
-          live: true,
-          extensions: ['secure-ephemeral']
-        })
-
-        // Replicate!
-        pipeline(
-          remoteNativeStream,
-          nativeReplicationStream,
-          remoteNativeStream,
-          (error) => {
-            console.log(`(Native stream from swarm) Pipe closed for ${readKey}`, error && error.message)
-          }
-        )
-      })
-    })
+    replicate(websocket, readKey)
   })
+
 
   // Display connection info.
   const horizontalRule = new Array(60).fill('⎺').join('')

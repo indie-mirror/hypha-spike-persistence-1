@@ -23,6 +23,9 @@ const hyperdb = require('hyperdb')
 // Streams (equivalent of pipeline in Node).
 const pump = require('pump')
 
+// HTTPS calls
+const requestPromise = require('request-promise-native')
+
 // Web socket replication
 const webSocketStream = require('websocket-stream')
 
@@ -274,12 +277,19 @@ function updateSetting (key, value) {
   persistSettings(settings)
 }
 
+
 // Returns the global read key for this domain or returns null if one does not exist.
 // (One not existing means that the always-on node for this domain has not been set up yet.)
 async function getReadKeyFromDatDNS() {
-  console.log('Todo: getReadKeyFromDatDNS()')
-  return null
+  console.log('getReadKeyFromDatDNS()')
+  let response = await requestPromise('https://localhost:443/.well-known/dat')
+  if (response === '') {
+    console.log('No DAT DNS entry. Forever node has not been initialised yet.')
+    response = null
+  }
+  return response
 }
+
 
 function getReadKeyFromLocalStorage() {
   console.log(`settings.readKey ${settings.readKey}`)
@@ -329,8 +339,6 @@ async function setInitialState () {
       view.viewState = view.viewStates.gettingStarted
       await changePassphrase()
     }
-
-
   }
 
   // const readKeyFromLocalStorage = getReadKeyFromLocalStorage()
@@ -509,7 +517,7 @@ function createDatabase(readKey, writeKey = null) {
 
 
     // Hypercore db is ready: connect to web socket and start replicating.
-    const remoteStream = webSocketStream(`wss://localhost/hypha/${dbKeyInHex}`)
+    const remoteStream = webSocketStream(`wss://localhost/replicate/${dbKeyInHex}`)
 
     console.log('remoteStream', remoteStream)
 
