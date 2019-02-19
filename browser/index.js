@@ -61,8 +61,9 @@ const view = new View(model)
 //
 // isInitialisedNode:       (bool) Is this an initialised node?
 //  isAuthorisedNode:       (bool) Is this an authorised node?
-//           readKey: (hex string) 32-byte local writer read key
-//          writeKey: (hex string) 64-byte local writer write key*
+//         hyphalink: (hex string) 32-byte global read key (the hyphalink for this domain)
+//      localReadKey: (hex string) 32-byte local writer read key
+//     localWriteKey: (hex string) 64-byte local writer write key*
 //
 // * Encrypted with the encryption key if the node is an authorised node (writer),
 //   plaintext otherwise.
@@ -72,6 +73,7 @@ let settings = null
 const defaultSettings = {
   isInitialisedNode: false,
   isAuthorisedNode: false,
+  hyphalink: null,
   readKey: null,
   writeKey: null,
 }
@@ -98,9 +100,6 @@ async function initialiseNode(passphrase = null) {
 // Create a new domain and a local node for it.
 async function createDomain() {
   console.log('Initialising new node with new domain')
-
-  // model.passphrase = await generatePassphrase()
-  // view.showPassphrase()
 
   const domain = view.domain
 
@@ -224,6 +223,10 @@ function generateKeys(passphrase, domain) {
 
       nodeKeys.secureEphemeralMessagingChannelSecretKey = secureEphemeralMessagingChannelSecretKey
       nodeKeys.secureEphemeralMessagingChannelSecretKeyInHex = secureEphemeralMessagingChannelSecretKey.toString('hex')
+
+      // TODO: Create a separate key for encrypting the settings.
+      // (We may end up using a single key for these but let’s keep them separate for now.)
+      // LEFT OFF HERE.
 
       resolve(nodeKeys)
     })
@@ -368,13 +371,14 @@ async function setInitialState () {
   // }
 }
 
+
 // TODO: Make this accept the global read key, global secret key, and local read key, and local write key as parameters.
 // ===== If the global secret key is not passed in and the local read and write keys are, then we create a writer based
 //       on an existing database (using its global read key).
 //
 // TODO: Update hyperDB so that we can pass in the local key and local secret key to the local writer.
 // ===== Matthias suggested we do this using a factory function passed into the constructor.
-function createDatabase(readKey, writeKey = null) {
+function createDatabase(readKey, writeKey = null, localReadKey = null, localWriteKey = null) {
   let db = null
   let stream = null
   let updateInterval = null
@@ -398,15 +402,24 @@ function createDatabase(readKey, writeKey = null) {
   //
   // I opened an issue for the error at https://github.com/mafintosh/hyperdb/issues/164
 
-  // Create a new hypercore using the newly-generated key material.
-  db = hyperdb((filename) => storage(filename), readKey, {
+  const databaseOptions = {
     createIfMissing: false,
     overwrite: false,
     valueEncoding: 'json',
     secretKey: writeKey,
     storeSecretKey: false
     // Note: do not define onWrite(). Leads to errors.
-  })
+  }
+
+  // If we are recreating a database on an initialised node,
+  // supply the local keys so we can reproduce the writer.
+  if (localReadKey !== null && localWriteKey !== null) {
+    databaseOptions.localKey = localReadKey
+    databaseOptions.localSecretKey = localWriteKey
+  }
+
+  // Create a new hypercore using the newly-generated key material.
+  db = hyperdb((filename) => storage(filename), readKey, )
 
   db.on('error', error => {
     console.log('Database error', error)
