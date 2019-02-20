@@ -226,7 +226,12 @@ function generateKeys(passphrase, domain) {
 
       // TODO: Create a separate key for encrypting the settings.
       // (We may end up using a single key for these but let’s keep them separate for now.)
-      // LEFT OFF HERE.
+      const context = Buffer.from('localStorage')
+      const localStorageSecretKey = Buffer.alloc(sodium.crypto_secretbox_KEYBYTES)
+      sodium.crypto_kdf_derive_from_key(localStorageSecretKey, 1, context, nodeKeys.nodeWriteKey)
+
+      nodeKeys.localStorageSecretKey = localStorageSecretKey
+      nodeKeys.localStorageSecretKeyInHex = localStorageSecretKey.toString('hex')
 
       resolve(nodeKeys)
     })

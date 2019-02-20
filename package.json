@@ -4,7 +4,7 @@
   "description": "Hypha Spike: Persistence 1",
   "main": "always-on/index.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1",
+    "test": "tape test/**/*.js",
     "start": "nodemon always-on/index.js --watch always-on/index.js"
   },
   "repository": {
@@ -43,5 +43,8 @@
     "sodium-universal": "^2.0.0",
     "webrtc-swarm": "^2.9.0",
     "websocket-stream": "^5.1.2"
+  },
+  "devDependencies": {
+    "tape": "^4.10.1"
   }
 }
