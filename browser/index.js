@@ -40,6 +40,8 @@ const platform = require('platform')
 
 const crypto = require('crypto')
 
+const hyphaCrypto = require('../lib/crypto')
+
 const { SecureEphemeralMessagingChannel } = require('@hypha/secure-ephemeral-messaging-channel')
 
 // The secure ephemeral messaging channel will be initialised once the
@@ -226,9 +228,9 @@ function generateKeys(passphrase, domain) {
 
       // TODO: Create a separate key for encrypting the settings.
       // (We may end up using a single key for these but let’s keep them separate for now.)
-      const context = Buffer.from('localStorage')
+      const localStorageContext = Buffer.from('localStorage')
       const localStorageSecretKey = Buffer.alloc(sodium.crypto_secretbox_KEYBYTES)
-      sodium.crypto_kdf_derive_from_key(localStorageSecretKey, 1, context, nodeKeys.nodeWriteKey)
+      sodium.crypto_kdf_derive_from_key(localStorageSecretKey, 1, localStorageContext, nodeKeys.nodeWriteKey)
 
       nodeKeys.localStorageSecretKey = localStorageSecretKey
       nodeKeys.localStorageSecretKeyInHex = localStorageSecretKey.toString('hex')
@@ -511,6 +513,17 @@ function createDatabase(readKey, writeKey = null, localReadKey = null, localWrit
     model.keys.nodeReadKeyInHex = to_hex(db.key)
     model.keys.localReadKeyInHex = db.local.key.toString('hex')
     model.keys.localWriteKeyInHex = db.local.secretKey.toString('hex')
+
+
+    console.log('Local ready key', localReadKey)
+    console.log('Local write key', localWriteKey)
+
+    if (localReadKey === null || localWriteKey === null) {
+      updateSetting('localReadKey', model.keys.localReadKeyInHex)
+      updateSetting('localWriteKeyEncrypted', hyphaCrypto.encrypt(model.keys.localWriteKeyInHex, model.keys.localStorageSecretKey))
+    }
+
+    persistSettings()
 
     view.showDatabaseIsReady()
 
