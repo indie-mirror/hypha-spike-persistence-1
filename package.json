@@ -4,7 +4,7 @@
   "description": "Hypha Spike: Persistence 1",
   "main": "always-on/index.js",
   "scripts": {
-    "test": "tape test/**/*.js",
+    "test": "tape test/**/*.js | node node_modules/tap-spec/bin/cmd.js",
     "start": "nodemon always-on/index.js --watch always-on/index.js"
   },
   "repository": {
@@ -45,6 +45,7 @@
     "websocket-stream": "^5.1.2"
   },
   "devDependencies": {
+    "tap-spec": "^5.0.0",
     "tape": "^4.10.1"
   }
 }
