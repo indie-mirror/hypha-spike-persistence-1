@@ -41,6 +41,7 @@ const platform = require('platform')
 const crypto = require('crypto')
 
 const hyphaCrypto = require('../lib/crypto')
+const utils = require('../lib/utils')
 
 const { SecureEphemeralMessagingChannel } = require('@hypha/secure-ephemeral-messaging-channel')
 
@@ -266,8 +267,9 @@ function createMessageHash(message) {
 
 function loadSettings () {
   let _settings = window.localStorage.settings
+  console.log(_settings)
   if (_settings !== undefined) {
-    _settings = JSON.parse(_settings)
+    _settings = utils.jsonParseWithBufferSupport(_settings)
   } else {
     console.log('Settings is undefined, using default settings.')
     _settings = defaultSettings
@@ -277,12 +279,14 @@ function loadSettings () {
   console.log('Loaded local settings', settings)
 }
 
-function persistSettings (settings) {
-  console.log('Persisting local settings', settings)
-  window.localStorage.settings = JSON.stringify(settings)
+function persistSettings (_settings) {
+  if (_settings === undefined) { _settings = settings }
+  console.log('Persisting local settings', _settings)
+  window.localStorage.settings = JSON.stringify(_settings)
 }
 
 function updateSetting (key, value) {
+  console.log(`Updating setting: ${key} = ${value}`)
   settings[key] = value
   persistSettings(settings)
 }
@@ -336,6 +340,7 @@ async function setInitialState () {
     // This node has not been initialised. Check if the hypha has
     // by attempting to read the global read key via Dat DNS
     // from the domain of this hypha.
+    console.log('Node not initialised.')
     const readKeyFromDatDNS = await getReadKeyFromDatDNS()
 
     if (readKeyFromDatDNS !== null) {
@@ -521,6 +526,10 @@ function createDatabase(readKey, writeKey = null, localReadKey = null, localWrit
     if (localReadKey === null || localWriteKey === null) {
       updateSetting('localReadKey', model.keys.localReadKeyInHex)
       updateSetting('localWriteKeyEncrypted', hyphaCrypto.encrypt(model.keys.localWriteKeyInHex, model.keys.localStorageSecretKey))
+    }
+
+    if (settings.isInitialisedNode === false) {
+      settings.isInitialisedNode = true
     }
 
     persistSettings()
