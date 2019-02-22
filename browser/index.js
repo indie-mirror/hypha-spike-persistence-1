@@ -335,6 +335,7 @@ async function setInitialState () {
       // Create the local database using the local read key and (unencrypted) local write key.
       // TODO
       console.log('This is an initialised node. About to load it using the local writer read and write keys.')
+      createDatabase(settings.readKey, null, settings.localReadKey, settings.localWriteKey)
     }
   } else {
     // This node has not been initialised. Check if the hypha has
