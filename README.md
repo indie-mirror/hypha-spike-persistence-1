@@ -1,5 +1,7 @@
 # Hypha Spike: Persistence 1
 
+__Note:__ Unlike previous spikes, I’m leaving this spike in a non-functional state and instead starting from scratch on the main project. See [https://ar.al/2019/02/01/hypha-spike-persistence-1/#post-mortem](#post-mortem).
+
 [Blog post](https://ar.al/2019/02/01/hypha-spike-persistence-1/)
 
 ## Usage
